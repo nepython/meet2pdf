@@ -15,15 +15,17 @@ def extractImages(pathIn, pathOut):
     print(pathIn)
     print(pathOut)
     count = 1
+    imageNumber = 0
     vidcap = cv2.VideoCapture(pathIn)
     success = True
     fps = int(vidcap.get(cv2.CAP_PROP_FPS))
-    secondsPerImage = 30
+    secondsPerImage = 60
 
     shareScreenCoverage = {"h": float(0.75), "w": float(0.75)}
 
     while success:
         success, image = vidcap.read()
+        count += 1
         if count % (secondsPerImage * fps) == 0:
             h, w, dimension = image.shape
 
@@ -40,11 +42,11 @@ def extractImages(pathIn, pathOut):
             ]
 
             try:
-                cv2.imwrite(f"{pathOut}/frame{count}.jpg", image)
+                cv2.imwrite(f"{pathOut}/frame{imageNumber}.jpg", image)
             except:
                 print(f"nah, {count} failed")
             finally:
-                count += 1
+                imageNumber += 1
 
 
 for file in fileList:
