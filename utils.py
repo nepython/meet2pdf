@@ -39,8 +39,8 @@ def extractImages(pathIn, pathOut, secondsPerImage=60, **kwargs):
             # compare if image already saved
             if prev_image is not None:
                 same:bool = CheckSimilarity(prev_image, image)
-            if same:
-                continue
+                if same:
+                    continue
             prev_image = image
             # else save image
             try:
@@ -79,7 +79,7 @@ def CheckSimilarity(img1: np.ndarray, img2: np.ndarray, thres=0.95):
     ''' Both img1 and img2 are nd arrays\n
         thres is a float percentage used to distinguish between same and different iamges\n 
         Returns True if the Images are similar(based on thres), False otherwise'''
-    sim = ssim(img1, img2, data_range = img2.max() - img2.max(), multichannel=True) 
+    sim = ssim(img1, img2, data_range = img2.max() - img2.min(), multichannel=True) 
     if sim >= thres:
         return True
     return False
