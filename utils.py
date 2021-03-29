@@ -19,6 +19,7 @@ def extractImages(pathIn, pathOut, secondsPerImage=60, **kwargs):
     success = True
     fps = int(vidcap.get(cv2.CAP_PROP_FPS))
     shareScreenCoverage = {"h": float(0.75), "w": float(0.75)}
+    prev_image = None
     while success:
         success, image = vidcap.read()
         count += 1

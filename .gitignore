@@ -1,4 +1,5 @@
 .vscode
+venv
 videos
 slides
 env
