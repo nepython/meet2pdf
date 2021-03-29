@@ -5,6 +5,10 @@ from natsort import natsorted, ns
 import cv2
 import img2pdf
 
+from skimage.metrics import structural_similarity as ssim
+import numpy as np
+import imageio as io
+
 from global_defaults import *
 
 
@@ -31,6 +35,14 @@ def extractImages(pathIn, pathOut, secondsPerImage=60, **kwargs):
                 croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
                 croppedImageAttributes["left"] : croppedImageAttributes["right"],
             ]
+
+            # compare if image already saved
+            if prev_image is not None:
+                same:bool = CheckSimilarity(prev_image, image)
+            if same:
+                continue
+            prev_image = image
+            # else save image
             try:
                 cv2.imwrite(f"{pathOut}/frame{imageNumber}.jpg", image)
             except:
@@ -59,3 +71,15 @@ def freeUpSpace(unique_id, video=True, images=True, pdf=False):
         shutil.rmtree(f'./{slides_dir}/{unique_id}')
     if pdf:
         os.remove(f'./{pdfs_dir}/{unique_id}')
+
+
+# CheckSimilarity compares two images and returns True if the two images are similar
+# to a threshold
+def CheckSimilarity(img1: np.ndarray, img2: np.ndarray, thres=0.95):
+    ''' Both img1 and img2 are nd arrays\n
+        thres is a float percentage used to distinguish between same and different iamges\n 
+        Returns True if the Images are similar(based on thres), False otherwise'''
+    sim = ssim(img1, img2, data_range = img2.max() - img2.max(), multichannel=True) 
+    if sim >= thres:
+        return True
+    return False
