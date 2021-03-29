@@ -5,9 +5,11 @@ Supported video formats: `['.mp4', '.mov', '.webm', '.wmv', '.mkv']`
 ## To launch the flask app locally for development purposes
 ```code
 # cd meet2pdf
+$ sudo apt install libgl1-mesa-glx
 $ pip install -r requirements.txt
 $ python main.py
 # In a separate terminal run below command to get celery worker runnning
+$ sudo apt install redis-server
 $ celery -A main.celery worker
 ```
 

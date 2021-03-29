@@ -46,7 +46,7 @@ def upload_files(unique_id):
             # The file extensions that shall be allowed
             if file_ext not in ['.mp4', '.mov', '.webm', '.wmv', '.mkv']:
                 return jsonify({'error': 'File extension not supported'}), 400
-        uploaded_file.save(os.path.join(f'{videos_dir}', unique_id))
+        uploaded_file.save(os.path.join(f'./{videos_dir}', unique_id))
         # Start an async function to process the video which keeps running in background
         convert2images.delay(unique_id)
         return jsonify({'uploaded': unique_id}), 200
