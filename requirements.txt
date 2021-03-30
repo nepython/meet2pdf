@@ -7,3 +7,4 @@ redis==3.5.3
 numpy==1.19.5
 imageio==2.9.0
 scikit-image==0.17.2
+decord==0.5.2

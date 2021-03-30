@@ -1,65 +1,117 @@
 import os
 import shutil
 
-from natsort import natsorted, ns
 import cv2
 import img2pdf
-
-from skimage.metrics import structural_similarity as ssim
-import numpy as np
 import imageio as io
+import numpy as np
+from decord import VideoReader
+from decord import cpu, gpu
+from natsort import natsorted, ns
+from skimage.metrics import structural_similarity as ssim
 
 from global_defaults import *
 
 
-def extractImages(pathIn, pathOut, secondsPerImage=60, **kwargs):
-    count = 1
-    imageNumber = 0
-    vidcap = cv2.VideoCapture(pathIn)
-    success = True
+def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, seconds=1, meet=True):
+    """
+    Extract frames from a video using decord's VideoReader
+        :param video_path: path of the video
+        :param frames_dir: the directory to save the frames
+        :param overwrite: to overwrite frames that already exist?
+        :param start: start frame
+        :param end: end frame
+        :param seconds: frame spacing
+        :return: count of images saved
+    """
+
+    video_path = os.path.normpath(video_path)  # make the paths OS (Windows) compatible
+    frames_dir = os.path.normpath(frames_dir)  # make the paths OS (Windows) compatible
+
+    video_dir, video_filename = os.path.split(video_path)  # get the video path and filename from the path
+
+    assert os.path.exists(video_path)  # assert the video file exists
+
+    vidcap = cv2.VideoCapture(video_path)
     fps = int(vidcap.get(cv2.CAP_PROP_FPS))
-    shareScreenCoverage = {"h": float(0.75), "w": float(0.75)}
+    if fps == 0:
+        return False
+    seconds = int(seconds*fps)
     prev_image = None
-    while success:
-        success, image = vidcap.read()
-        count += 1
-        if count % (secondsPerImage * fps) == 0:
-            h, w, dimension = image.shape
-            croppedImageAttributes = {
-                "top": int((((1 - shareScreenCoverage["h"]) / 2) * h)),
-                "bottom": int((h - (((1 - shareScreenCoverage["h"]) / 2) * h))),
-                "left": int(0),
-                "right": int(shareScreenCoverage["w"] * w),
-            }
-            # to crop Google meet slides frame only and ignore the speaker part of screen
-            image = image[
-                croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
-                croppedImageAttributes["left"] : croppedImageAttributes["right"],
-            ]
 
-            # compare if image already saved
-            if prev_image is not None:
-                same:bool = CheckSimilarity(prev_image, image)
-                if not same:
-                    # save image
-                    try:
-                        cv2.imwrite(
-                            f"{pathOut}/frame{imageNumber}.jpg", prev_image)
-                    except:
-                        print(f"nah, {count} failed")
-                    finally:
-                        imageNumber += 1
-            prev_image = image
-    
-    #save the last image too if it was diff from prev frame
+    try:
+        vr = VideoReader(video_path, ctx=gpu(0))  # can set to cpu or gpu
+    except:
+        vr = VideoReader(video_path, ctx=cpu(0))  # can set to cpu or gpu
+
+    if (meet):
+        shareScreenCoverage = {"h": float(0.75), "w": float(0.75)}
+    else:
+        shareScreenCoverage = {"h": float(1), "w": float(1)}
+    if start < 0:  # if start isn't specified lets assume 0
+        start = 0
+    if end < 0:  # if end isn't specified assume the end of the video
+        end = len(vr)
+
+    frames_list = list(range(start, end, seconds))
+    saved_count = 0
+    frames = vr.get_batch(frames_list).asnumpy()
+
+    for index, frame in zip(frames_list, frames):  # lets loop through the frames until the end
+        save_path = os.path.join(frames_dir, video_filename, f"frame{saved_count}.jpg")  # create the save path
+        image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        h, w, dimension = image.shape
+        croppedImageAttributes = {
+            "top": int((((1 - shareScreenCoverage["h"]) / 2) * h)),
+            "bottom": int((h - (((1 - shareScreenCoverage["h"]) / 2) * h))),
+            "left": int(0),
+            "right": int(shareScreenCoverage["w"] * w),
+        }
+        # to crop Google meet slides frame only and ignore the speaker part of screen
+        image = image[
+            croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
+            croppedImageAttributes["left"] : croppedImageAttributes["right"],
+        ]
+
+        # compare if image already saved
+        if prev_image is not None:
+            same:bool = CheckSimilarity(prev_image, image)
+            if not same:
+                cv2.imwrite(save_path, image)  # save the extracted image
+                saved_count += 1  # increment our counter by one
+        else:
+            if not os.path.exists(save_path) or overwrite:  # if it doesn't exist or we want to overwrite anyways
+                cv2.imwrite(save_path, image)  # save the extracted image
+                saved_count += 1  # increment our counter by one
+        prev_image = image
+
+    # save the last image too if it was diff from prev frame
     if not same:
-        try:
-            cv2.imwrite(
-                f"{pathOut}/frame{imageNumber}.jpg", prev_image)
-        except:
-            print(f"nah, {count} failed")
+        cv2.imwrite(save_path, image)  # save the extracted image
+    return True
 
 
+def video_to_frames(video_path, frames_dir, overwrite=False, seconds=1, meet=True):
+    """
+    Extracts the frames from a video
+        :param video_path: path to the video
+        :param frames_dir: directory to save the frames
+        :param overwrite: overwrite frames if they exist?
+        :param seconds: extract 1 frames in these many seconds
+        :return: path to the directory where the frames were saved, or None if fails
+    """
+
+    video_path = os.path.normpath(video_path)  # make the paths OS (Windows) compatible
+    frames_dir = os.path.normpath(frames_dir)  # make the paths OS (Windows) compatible
+
+    video_dir, video_filename = os.path.split(video_path)  # get the video path and filename from the path
+
+    # make directory to save frames, its a sub dir in the frames_dir with the video name
+    os.makedirs(os.path.join(frames_dir, video_filename), exist_ok=True)
+
+    extract_frames(video_path, frames_dir, seconds=seconds, meet=meet)  # let's now extract the frames
+    return os.path.join(frames_dir, video_filename)  # when done return the directory containing the frames
 
 def convert2pdf(unique_id):
     imgs = []
