@@ -125,6 +125,7 @@ def convert2pdf(unique_id):
         f.write(img2pdf.convert(imgs))
 
 def freeUpSpace(unique_id, video=True, images=True, pdf=False):
+    os.remove(f'./{pdfs_dir}/{unique_id}_tmp.pdf')
     if video:
         os.remove(f'./{videos_dir}/{unique_id}')
     if images:

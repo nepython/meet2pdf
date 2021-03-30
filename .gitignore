@@ -6,3 +6,4 @@ env
 pdfs
 __pycache__
 test_folder
+*.deb

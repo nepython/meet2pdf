@@ -6,10 +6,13 @@ Supported video formats: `['.mp4', '.mov', '.webm', '.wmv', '.mkv']`
 ```code
 # cd meet2pdf
 $ sudo apt install libgl1-mesa-glx
-$ pip install -r requirements.txt
-$ python main.py
-# In a separate terminal run below command to get celery worker runnning
+$ sudo apt-get install tesseract-ocr-all
 $ sudo apt install redis-server
+$ pip install -r requirements.txt
+
+$ python main.py
+
+# In a separate terminal run below command to get celery worker runnning
 $ celery -A main.celery worker
 ```
 

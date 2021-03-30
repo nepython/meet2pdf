@@ -1,5 +1,6 @@
 import os
 
+import ocrmypdf
 from flask import Flask, request, jsonify, send_from_directory, abort, current_app, send_file
 from flask_cors import CORS, cross_origin
 from celery import Celery
@@ -72,7 +73,8 @@ def convert2images(unique_id, meet, seconds):
         print("Directory '%s' created successfully" % directory)
         frames = video_to_frames(video_path=file, frames_dir=f"./{slides_dir}", seconds=seconds, meet=meet)
         if frames: # If no frames have been generated due to poor video
-            convert2pdf(unique_id)
+            convert2pdf(f'{unique_id}_tmp')
+            ocrmypdf.ocr(f'./{pdfs_dir}/{unique_id}_tmp.pdf', f'./{pdfs_dir}/{unique_id}.pdf', deskew=True, pdf_renderer='hocr', language='eng+equ')
         freeUpSpace(unique_id)
     except OSError:
         print("Directory '{0}' can not be created".format(unique_id))
