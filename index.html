@@ -1,17 +1,3 @@
-<!-- <!doctype html>
-<html>
-  <head>
-    <title>File Upload</title>
-  </head>
-  <body>
-    <h1>File Upload</h1>
-    <form method="POST" action="/ascaead-ascav-ecaefcae-acaef" enctype="multipart/form-data">
-      <p><input type="file" name="file"></p>
-      <p><input type="submit" value="Submit"></p>
-    </form>
-  </body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -19,68 +5,292 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Slides Extractor</title>
+    <title>Auto Slides Creator</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"
         integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <style>
-        #progress-wrp {
-            border: 1px solid #0099CC;
-            padding: 1px;
-            position: relative;
-            height: 30px;
-            border-radius: 3px;
-            margin: 10px;
-            text-align: left;
-            background: #fff;
-            box-shadow: inset 1px 3px 6px rgba(0, 0, 0, 0.12);
+        @import url('https://fonts.googleapis.com/css2?family=Staatliches&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700;1,900&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Source Sans Pro', sans-serif;
+            /* font-family: 'Staatliches', cursive; */
         }
 
-        #progress-wrp .progress-bar {
-            height: 100%;
-            border-radius: 3px;
-            background-color: #f39ac7;
-            width: 0;
-            box-shadow: inset 1px 1px 10px rgba(0, 0, 0, 0.11);
+        body {
+            background-color: hsl(250, 95%, 69%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
         }
 
-        #progress-wrp .status {
-            top: 3px;
-            left: 50%;
+        #container {
+            background-color: rgb(31, 31, 31);
+            box-shadow: 0px 0px 14px 0px rgba(50, 50, 50, 0.75);
+            padding: 30px 20px;
+        }
+
+        .heading {
+            font-family: 'Staatliches', cursive;
+            color: hsl(250, 95%, 82%);
+            color: hsl(200, 2%, 75%);
+            letter-spacing: 2px;
+            font-size: 1.8em;
+        }
+
+        .partition {
+            margin-top: 10px;
+            width: 100%;
+            height: 1px;
+            background-color: azure;
+        }
+
+        .formContainer {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-direction: column;
+            /* background-color: beige; */
+            padding: 40px 10px;
+            padding-right: 20px;
+            padding-bottom: 0;
+        }
+
+        fieldset {
+            margin-bottom: min(50px, 5vh);
+            border: 0;
+            color: hsl(200, 2%, 75%);
+        }
+
+        .formParam {
+            margin-bottom: 9px;
+            font-family: 'Source Sans Pro';
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        select,
+        input {
+            width: 100%;
+            background-color: hsl(0, 0%, 0%);
+            border: 0;
+            color: hsl(200, 2%, 75%);
+            height: 40px;
+            padding-left: 20px;
+            padding-right: 20px;
+            vertical-align: middle;
+        }
+
+        input[type="file"] {
+            /* border:1px solid white; */
+            border-radius: 2px;
+        }
+
+        /* ////////////////////// */
+
+        #file {
             position: absolute;
+            left: 0;
+            opacity: 0;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #dropperDiv {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: hsl(0, 0%, 0%);
+            border: 2px dotted #bebebe;
+            border-radius: 4px;
+        }
+
+        #dropperLabel {
             display: inline-block;
-            color: #000000;
+            position: relative;
+            height: 100px;
+            width: min(100%, 400px);
+        }
+
+        #dropperDiv.dragover {
+            background-color: hsl(0, 0%, 17%);
+        }
+
+        #uploadBtn {
+            width: 100%;
+            background-color: hsl(0, 0%, 20%);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            margin-top: 20px;
+        }
+
+        #uploadBtn:hover {
+            background-color: hsl(0, 0%, 25%);
+        }
+
+        #uploadBtn:active {
+            background-color: hsl(0, 0%, 20%);
+        }
+
+        /* ////////////////// */
+
+        #rangeValue {
+            position: relative;
+            display: block;
+            text-align: center;
+            font-size: 6em;
+            color: #999;
+            font-weight: 400;
+        }
+
+        .range {
+            width: 80%;
+            height: 15px;
+            -webkit-appearance: none;
+            background: hsl(0, 0%, 0%);
+            outline: none;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 1);
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: hsl(250, 51%, 49%);
+            cursor: pointer;
+            border: 4px solid hsl(200, 2%, 75%);
+            box-shadow: -407px 0 0 400px hsl(250, 51%, 49%);
+        }
+
+        .rangeValue {
+            float: right;
+            text-align: right;
+        }
+
+
+        .link {
+            color: hsl(200, 2%, 75%) !important;
+        }
+
+        .link>* {
+            color: hsl(200, 2%, 75%) !important;
+        }
+
+        #filename {
+            width: 220px;
+            overflow: hidden;
+            height: 20px;
+            text-overflow: ellipsis;
+            color: hsl(0, 0%, 50%);
+            white-space: nowrap;
         }
     </style>
 </head>
 
 <body>
-    <h1>File Upload</h1>
-    <form method="POST" action="/default" enctype="multipart/form-data" id="uploadForm">
-        <fieldset>
-            <label for="file">Select a file</label>
-            <input name="file" type="file" id="file">
-        </fieldset>
-        <fieldset>
-            <label for="seconds">Time between two frames</label>
-            <input type="number" id="seconds" name="seconds" min="20" max="120" value="60">
-        </fieldset>
-        <fieldset>
-            <label for="meet">Is the video a recorded Google Meet?</label>
-            <select name="meet" id="meet">
-                <option value="true" selected>Yes</option>
-                <option value="false">No</option>
-            </select>
-        </fieldset>
-        <fieldset>
-            <!-- <input type="submit" value="Submit"> -->
-            <button id="uploadBtn" type="button">Upload</button>
-        </fieldset>
-    </form>
-    <div id="progress-wrp">
-        <div class="progress-bar"></div>
-        <div class="status">0%</div>
+    <div id="container">
+        <div class="heading">Auto Slides Creator</div>
+        <div class="partition"></div>
+        <div class="formContainer">
+            <form enctype="multipart/form-data" id="uploadForm">
+                <fieldset>
+                    <div class="formParam">Select a video file</div>
+                    <!-- <input name="file" type="file" id="file"> -->
+                    <label for="file" id="dropperLabel">
+                        <div id="dropperDiv">Click or drop something here</div>
+                        <input type="file" name="file" id="file">
+                    </label>
+                    <p id="filename"></p>
+                </fieldset>
+                <fieldset>
+                    <div class="formParam">Time between two captures (sec)</div>
+                    <!-- <input type="number" id="seconds" name="seconds" min="20" max="120" value="60"> -->
+                    <input class="range" type="range" name="" value="20" min="20" max="200" id="seconds"
+                        onChange="rangeSlide(this.value)" onmousemove="rangeSlide(this.value)"></input>
+                    <span class="rangeValue">20</span>
+                </fieldset>
+                <fieldset>
+                    <div class="formParam">Is the video a recorded G Meet?</div>
+                    <select name="meet" id="meet">
+                        <option value="1" selected>Yes</option>
+                        <option value="0">No</option>
+                    </select>
+                </fieldset>
+                <fieldset>
+                    <!-- <input type="submit" value="Submit"> -->
+                    <div id="uploadBtn">Upload</div>
+                </fieldset>
+            </form>
+            <div class="link"></div>
+        </div>
     </div>
     <script>
+        var fileInput = document.querySelector("#file");
+        var filenameContainer = document.querySelector('#filename');
+        var dropzone = document.querySelector('#dropperDiv');
+
+        fileInput.addEventListener('change', function () {
+            filenameContainer.innerText = fileInput.value.split('\\').pop();
+            dropzone.classList.remove('dragover');
+        });
+
+        fileInput.addEventListener('dragenter', function () {
+            dropzone.classList.add('dragover');
+        });
+
+        fileInput.addEventListener('dragleave', function () {
+            dropzone.classList.remove('dragover');
+        });
+
+        rangeSlide = (value) => {
+            document.querySelector(".rangeValue").innerHTML = value;
+        }
+
+        async function postSuccess(finalString) {
+            try {
+                let response = await fetch(`http://meet2pdf.centralus.cloudapp.azure.com/${finalString}`, {
+                    method: 'GET'
+                });
+                if (response.ok) { // if HTTP-status is 200-299
+                    document.querySelector(".link").innerHTML = `<a href="http://meet2pdf.centralus.cloudapp.azure.com/${finalString}">Download PDF</a>`;
+                    return true;
+                }
+                else {
+                    document.querySelector(".link").innerHTML = `Video is being processed...`;
+                    setTimeout(postSuccess(finalString), 5000);
+                }
+            }
+            catch (err) {
+                alert("Please Refresh the page and try again. Check console for more info.");
+                console.log(err);
+                return true;
+
+            }
+        }
+
         var random = Math.random().toString(36).substring(2, 7);
         var ts = Math.round((new Date()).getTime() / 1000);
         var finalString = ts.toString() + "_" + random;
@@ -112,11 +322,11 @@
             // add assoc key values, this will be posts values
             formData.append("file", this.file, this.getName());
             formData.append("seconds", $("#seconds").val());
-            formData.append("meet", $("#meet").val() == "true" ? 1 : 0);
+            formData.append("meet", $("#meet").val());
 
             $.ajax({
                 type: "POST",
-                url: `http://127.0.0.1:5000/${finalString}`,
+                url: `http://meet2pdf.centralus.cloudapp.azure.com/${finalString}`,
                 xhr: function () {
                     var myXhr = $.ajaxSettings.xhr();
                     if (myXhr.upload) {
@@ -124,11 +334,15 @@
                     }
                     return myXhr;
                 },
-                success: function (data) {
-                    // your callback here
+                success: function (data, textStatus, xhr) {
+                    document.querySelector(".link").innerHTML = `Video is being processed...`;
+                    setTimeout(postSuccess(finalString), 5000);
                 },
-                error: function (error) {
-                    // handle error
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert("Couldn't upload video. Check console for details.");
+                    console.log(jqxhr);
+                    console.log(textStatus);
+                    console.log(errorThrown)
                 },
                 async: true,
                 data: formData,
@@ -143,13 +357,13 @@
             var percent = 0;
             var position = event.loaded || event.position;
             var total = event.total;
-            var progress_bar_id = "#progress-wrp";
+            // var progress_bar_id = "#progress-wrp";
             if (event.lengthComputable) {
-                percent = Math.ceil(position / total * 100);
+                percent = (position / total * 100);
             }
             // update progressbars classes so it fits your code
-            $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
-            $(progress_bar_id + " .status").text(percent + "%");
+            // $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
+            document.querySelector(".link").innerHTML = percent.toFixed(2) + "% uploaded"
         };
 
         //Change id to your id
@@ -162,6 +376,8 @@
             // execute upload
             upload.doUpload();
         });
+
+
     </script>
 </body>
 
