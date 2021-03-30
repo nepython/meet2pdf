@@ -13,7 +13,7 @@ from skimage.metrics import structural_similarity as ssim
 from global_defaults import *
 
 
-def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, seconds=1, meet=True):
+def extract_frames(video_path, frames_dir, start=-1, end=-1, seconds=0.1, meet=True):
     """
     Extract frames from a video using decord's VideoReader
         :param video_path: path of the video
@@ -37,7 +37,7 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, se
     if fps == 0:
         return False
     seconds = int(seconds*fps)
-    prev_image = None
+    frameToStore = None 
 
     try:
         vr = VideoReader(video_path, ctx=gpu(0))  # can set to cpu or gpu
@@ -59,9 +59,9 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, se
 
     for index, frame in zip(frames_list, frames):  # lets loop through the frames until the end
         save_path = os.path.join(frames_dir, video_filename, f"frame{saved_count}.jpg")  # create the save path
-        image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        newFrame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-        h, w, dimension = image.shape
+        h, w, dimension = newFrame.shape
         croppedImageAttributes = {
             "top": int((((1 - shareScreenCoverage["h"]) / 2) * h)),
             "bottom": int((h - (((1 - shareScreenCoverage["h"]) / 2) * h))),
@@ -69,35 +69,33 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, se
             "right": int(shareScreenCoverage["w"] * w),
         }
         # to crop Google meet slides frame only and ignore the speaker part of screen
-        image = image[
+        newFrame = newFrame[
             croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
             croppedImageAttributes["left"] : croppedImageAttributes["right"],
         ]
-
-        # compare if image already saved
-        if prev_image is not None:
-            same:bool = CheckSimilarity(prev_image, image)
+ 
+        # have seen atleast 1 frame before. 
+        if frameToStore is not None:
+            # compare new frame with last frame
+            same:bool = CheckSimilarity(frameToStore, newFrame)
+            # save last frame if last frame is not same as new frame
             if not same:
-                cv2.imwrite(save_path, image)  # save the extracted image
+                cv2.imwrite(save_path, frameToStore)  # save the extracted image
                 saved_count += 1  # increment our counter by one
-        else:
-            if not os.path.exists(save_path) or overwrite:  # if it doesn't exist or we want to overwrite anyways
-                cv2.imwrite(save_path, image)  # save the extracted image
-                saved_count += 1  # increment our counter by one
-        prev_image = image
+        frameToStore = newFrame
 
     # save the last image too if it was diff from prev frame
     if not same:
-        cv2.imwrite(save_path, image)  # save the extracted image
+        cv2.imwrite(save_path, frameToStore)  # save the extracted image
+        saved_count += 1
     return True
 
 
-def video_to_frames(video_path, frames_dir, overwrite=False, seconds=1, meet=True):
+def video_to_frames(video_path, frames_dir, seconds=1, meet=True):
     """
     Extracts the frames from a video
         :param video_path: path to the video
         :param frames_dir: directory to save the frames
-        :param overwrite: overwrite frames if they exist?
         :param seconds: extract 1 frames in these many seconds
         :return: path to the directory where the frames were saved, or None if fails
     """

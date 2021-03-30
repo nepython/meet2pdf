@@ -64,7 +64,7 @@ def convert2images(unique_id, meet, seconds):
     try:
         os.makedirs(path, exist_ok=True)
         print("Directory '%s' created successfully" % directory)
-        frames = video_to_frames(video_path=file, frames_dir=f"./{slides_dir}", overwrite=False, seconds=seconds, meet=meet)
+        frames = video_to_frames(video_path=file, frames_dir=f"./{slides_dir}", seconds=seconds, meet=meet)
         if frames: # If no frames have been generated due to poor video
             convert2pdf(unique_id)
         freeUpSpace(unique_id)
