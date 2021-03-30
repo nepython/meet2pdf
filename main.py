@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, request, jsonify, send_from_directory, abort, current_app, send_file
+from flask_cors import CORS, cross_origin
 from celery import Celery
 
 from global_defaults import *
@@ -11,7 +12,10 @@ from utils import video_to_frames, convert2pdf, freeUpSpace
 app = Flask(__name__)
 # Max file size that can be uploaded
 app.config['MAX_CONTENT_LENGTH'] = max_video_size
-# Celery broker has been used to run tasks in background
+
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
 app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 
@@ -21,11 +25,13 @@ celery.conf.update(app.config)
 
 
 ##################### MAIN WEBAPP #######################
+@cross_origin
 @app.route('/')
 def index():
     return send_from_directory("./", "index.html")
 
 
+@cross_origin
 @app.route('/<unique_id>', methods=['POST', 'GET'])
 def upload_files(unique_id):
     if (request.method == 'GET'):
