@@ -41,7 +41,7 @@ def upload_files(unique_id):
         # if it doesn't exist then search in videos directory if a video with this id exists
         elif os.path.exists(f'./{videos_dir}/{unique_id}'):
             # If video exists then send message that it is being processed
-            return jsonify({'error': 'The video is being processed'}), 200
+            return jsonify({'error': 'The video is being processed'}), 403
         # If video doesn't exist then return error
         return jsonify({'error': 'No PDF with this id exists'}), 404
     if (request.method == 'POST'):
