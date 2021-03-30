@@ -47,8 +47,8 @@ def upload_files(unique_id):
     if (request.method == 'POST'):
         uploaded_file = request.files['file']
         filename = uploaded_file.filename
-        meet = request.form.get('meet', True)
-        seconds = request.form.get('seconds', 60)
+        meet = bool(int(request.form.get('meet', True)))
+        seconds = int(request.form.get('seconds', 60))
         if filename != '':
             file_ext = os.path.splitext(filename)[1]
             # The file extensions that shall be allowed

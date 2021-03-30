@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html>
 <html>
   <head>
     <title>File Upload</title>
@@ -10,4 +10,159 @@
       <p><input type="submit" value="Submit"></p>
     </form>
   </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Slides Extractor</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <style>
+        #progress-wrp {
+            border: 1px solid #0099CC;
+            padding: 1px;
+            position: relative;
+            height: 30px;
+            border-radius: 3px;
+            margin: 10px;
+            text-align: left;
+            background: #fff;
+            box-shadow: inset 1px 3px 6px rgba(0, 0, 0, 0.12);
+        }
+
+        #progress-wrp .progress-bar {
+            height: 100%;
+            border-radius: 3px;
+            background-color: #f39ac7;
+            width: 0;
+            box-shadow: inset 1px 1px 10px rgba(0, 0, 0, 0.11);
+        }
+
+        #progress-wrp .status {
+            top: 3px;
+            left: 50%;
+            position: absolute;
+            display: inline-block;
+            color: #000000;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>File Upload</h1>
+    <form method="POST" action="/default" enctype="multipart/form-data" id="uploadForm">
+        <fieldset>
+            <label for="file">Select a file</label>
+            <input name="file" type="file" id="file">
+        </fieldset>
+        <fieldset>
+            <label for="seconds">Time between two frames</label>
+            <input type="number" id="seconds" name="seconds" min="20" max="120" value="60">
+        </fieldset>
+        <fieldset>
+            <label for="meet">Is the video a recorded Google Meet?</label>
+            <select name="meet" id="meet">
+                <option value="true" selected>Yes</option>
+                <option value="false">No</option>
+            </select>
+        </fieldset>
+        <fieldset>
+            <!-- <input type="submit" value="Submit"> -->
+            <button id="uploadBtn" type="button">Upload</button>
+        </fieldset>
+    </form>
+    <div id="progress-wrp">
+        <div class="progress-bar"></div>
+        <div class="status">0%</div>
+    </div>
+    <script>
+        var random = Math.random().toString(36).substring(2, 7);
+        var ts = Math.round((new Date()).getTime() / 1000);
+        var finalString = ts.toString() + "_" + random;
+        randomGenerator = () => {
+            random = Math.random().toString(36).substring(2, 7);
+            ts = Math.round((new Date()).getTime() / 1000);
+            finalString = ts.toString() + "_" + random;
+        }
+        // $("#uploadForm").attr("action", `http://meet2pdf.centralus.cloudapp.azure.com/${finalString}`);
+
+        var Upload = function (file) {
+            this.file = file;
+        };
+
+        Upload.prototype.getType = function () {
+            return this.file.type;
+        };
+        Upload.prototype.getSize = function () {
+            return this.file.size;
+        };
+        Upload.prototype.getName = function () {
+            return this.file.name;
+        };
+        Upload.prototype.doUpload = function () {
+            var that = this;
+            var formData = new FormData();
+            randomGenerator();
+
+            // add assoc key values, this will be posts values
+            formData.append("file", this.file, this.getName());
+            formData.append("seconds", $("#seconds").val());
+            formData.append("meet", $("#meet").val() == "true" ? 1 : 0);
+
+            $.ajax({
+                type: "POST",
+                url: `http://127.0.0.1:5000/${finalString}`,
+                xhr: function () {
+                    var myXhr = $.ajaxSettings.xhr();
+                    if (myXhr.upload) {
+                        myXhr.upload.addEventListener('progress', that.progressHandling, false);
+                    }
+                    return myXhr;
+                },
+                success: function (data) {
+                    // your callback here
+                },
+                error: function (error) {
+                    // handle error
+                },
+                async: true,
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false,
+                timeout: 60000
+            });
+        };
+
+        Upload.prototype.progressHandling = function (event) {
+            var percent = 0;
+            var position = event.loaded || event.position;
+            var total = event.total;
+            var progress_bar_id = "#progress-wrp";
+            if (event.lengthComputable) {
+                percent = Math.ceil(position / total * 100);
+            }
+            // update progressbars classes so it fits your code
+            $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
+            $(progress_bar_id + " .status").text(percent + "%");
+        };
+
+        //Change id to your id
+        $("#uploadBtn").on("click", function (e) {
+            var file = $("#file")[0].files[0];
+            var upload = new Upload(file);
+
+            // maby check size or type here with upload.getSize() and upload.getType()
+
+            // execute upload
+            upload.doUpload();
+        });
+    </script>
+</body>
+
 </html>

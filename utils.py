@@ -73,7 +73,7 @@ def extract_frames(video_path, frames_dir, start=-1, end=-1, seconds=0.1, meet=T
             croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
             croppedImageAttributes["left"] : croppedImageAttributes["right"],
         ]
- 
+
         # have seen atleast 1 frame before. 
         if frameToStore is not None:
             # compare new frame with last frame
