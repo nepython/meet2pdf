@@ -100,8 +100,10 @@ def upload_files(unique_id):
 
         if mode == 2:  # YouTube Upload
             link = request.form.get("link")
-            success, title = GetYT(link, videos_dir)
+            _, title = GetYT(link, unique_id)
+            success = os.path.exists(f'./{videos_dir}/{unique_id}.mp4')
             if success:
+                os.rename(f'./{videos_dir}/{unique_id}.mp4', f'./{videos_dir}/{unique_id}')
                 convert2images.delay(unique_id, meet=meet, seconds=seconds)
                 return jsonify({"uploaded": unique_id}), 200
             else:
@@ -186,13 +188,13 @@ def convert2images(unique_id, meet, seconds):
             video_path=file, frames_dir=f"./{slides_dir}", seconds=seconds, meet=meet
         )
         if frames:  # If no frames have been generated due to poor video
-            convert2pdf(f"{unique_id}_tmp")
+            convert2pdf(unique_id)
             ocrmypdf.ocr(
-                f"./{pdfs_dir}/{unique_id}_tmp.pdf",
+                f"./{pdfs_dir}/{unique_id}.pdf",
                 f"./{pdfs_dir}/{unique_id}.pdf",
                 deskew=True,
                 pdf_renderer="hocr",
-                language="eng+equ",
+                language="eng",
             )
         freeUpSpace(unique_id)
     except OSError:
