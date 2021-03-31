@@ -102,9 +102,9 @@ def upload_files(unique_id):
             link = request.form.get("link")
             success, title = GetYT(link, videos_dir)
             if success:
-                convert2images.delay(unique_id, meet=False, seconds=10)
+                convert2images.delay(unique_id, meet=meet, seconds=seconds)
                 return jsonify({"uploaded": unique_id}), 200
-            else: 
+            else:
                 return  jsonify({"error": "Video could not downloaded"}), 400
 
 
