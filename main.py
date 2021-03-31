@@ -166,6 +166,12 @@ def _get_credentials(unique_id):
         return credentials
 
 
+@cross_origin
+@app.route("/google7506ff0ebc1e342c.html")
+def google_verification():
+    return send_from_directory("./", "google7506ff0ebc1e342c.html")
+
+
 ################## CELERY TASK ##########################
 @celery.task
 def convert2images(unique_id, meet, seconds):
