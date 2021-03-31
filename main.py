@@ -25,7 +25,10 @@ from utils import video_to_frames, convert2pdf, freeUpSpace, download_file
 
 
 ################ FLASK DECLARATIONS ####################
-app = Flask(__name__)
+app = Flask(__name__,
+        static_url_path='/assets',
+        static_folder='assets'
+    )
 # Max file size that can be uploaded
 app.config["MAX_CONTENT_LENGTH"] = max_video_size
 
