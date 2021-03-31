@@ -21,7 +21,7 @@ from oauth2client import client
 from oauth2client.file import Storage
 
 from global_defaults import *
-from utils import video_to_frames, convert2pdf, freeUpSpace, download_file
+from utils import video_to_frames, convert2pdf, freeUpSpace, download_file, GetYT
 
 
 ################ FLASK DECLARATIONS ####################
@@ -100,7 +100,12 @@ def upload_files(unique_id):
 
         if mode == 2:  # YouTube Upload
             link = request.form.get("link")
-            return jsonify({"uploaded": unique_id}), 200
+            success, title = GetYT(link, videos_dir)
+            if success:
+                convert2images.delay(unique_id, meet=False, seconds=10)
+                return jsonify({"uploaded": unique_id}), 200
+            else: 
+                return  jsonify({"error": "Video could not downloaded"}), 400
 
 
 @cross_origin

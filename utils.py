@@ -13,6 +13,8 @@ from skimage.metrics import structural_similarity as ssim
 import httplib2
 from apiclient import discovery
 from apiclient.http import MediaIoBaseDownload, MediaFileUpload
+from pytube import YouTube 
+import os
 
 from global_defaults import *
 
@@ -234,3 +236,53 @@ def freeUpSpace(unique_id, video=True, images=True, pdf=False):
         shutil.rmtree(f"./{slides_dir}/{unique_id}")
     if pdf:
         os.remove(f"./{pdfs_dir}/{unique_id}")
+
+# GetYT
+def GetYT(link=None, unique_id=None):
+    '''
+    Downloads a file from youtuve.\n Does not re-download if the video already
+    exists.
+    Returns 0 if download succesful, 1 otherwise.
+        path_dir: path to save the file at.
+        link: YouTube link of the file
+    ''' 
+    try :
+        os.makedirs(videos_dir, exist_ok=True)
+    except Exception as e:
+        print("Could not create directory to save video")
+        print(e)
+        return 1, None
+
+    try:
+        yt = YouTube(link)
+        # sanity check
+        # print(yt.title) 
+    except Exception as e: 
+        print("Connection error")
+        print(e)
+        return 1, None
+
+    # allowed_res is the list of resolutions we are
+    # willing to download, in our order of preference.
+    allowed_res = ["480p", "360p", "720p","240p", "144p"]
+    try: 
+        for res in allowed_res:
+            # filters out all the files with "mp4" extension 
+            mp4files = yt.streams.filter(res=res, progressive=True, file_extension='mp4') 
+            if len(mp4files) != 0:
+                break
+        # download the video 
+        mp4files.first().download(videos_dir, filename=unique_id)
+    except Exception as e: 
+        print("Could not download")
+        print(e)
+        return 1, None
+
+    file_path = os.path.join(videos_dir, yt.title)
+    print(f'File Downloaded {file_path}') 
+    return 0, yt.title
+    
+
+if __name__ == "__main__":
+    link = "https://youtu.be/FCEvOYYoBnY"
+    GetYT(link, "./videos/")
