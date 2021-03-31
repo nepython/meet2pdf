@@ -1,5 +1,6 @@
 import os
 import shutil
+from io import BytesIO
 
 import cv2
 import img2pdf
@@ -9,6 +10,9 @@ from decord import VideoReader
 from decord import cpu, gpu
 from natsort import natsorted, ns
 from skimage.metrics import structural_similarity as ssim
+import httplib2
+from apiclient import discovery
+from apiclient.http import MediaIoBaseDownload, MediaFileUpload
 
 from global_defaults import *
 
@@ -124,15 +128,6 @@ def convert2pdf(unique_id):
     with open(f"./{pdfs_dir}/{unique_id}.pdf","wb") as f:
         f.write(img2pdf.convert(imgs))
 
-def freeUpSpace(unique_id, video=True, images=True, pdf=False):
-    os.remove(f'./{pdfs_dir}/{unique_id}_tmp.pdf')
-    if video:
-        os.remove(f'./{videos_dir}/{unique_id}')
-    if images:
-        shutil.rmtree(f'./{slides_dir}/{unique_id}')
-    if pdf:
-        os.remove(f'./{pdfs_dir}/{unique_id}')
-
 
 # CheckSimilarity compares two images and returns True if the two images are similar
 # to a threshold
@@ -144,3 +139,75 @@ def CheckSimilarity(img1: np.ndarray, img2: np.ndarray, thres=0.90):
     if sim >= thres:
         return True
     return False
+
+
+
+def fetch(query, sort='modifiedTime desc'):
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('drive', 'v3', http=http)
+    results = service.files().list(
+        q=query,orderBy=sort,pageSize=10,fields="nextPageToken, files(id, name)").execute()
+    items = results.get('files', [])
+    return items
+
+def download_file(file_id, unique_id, credentials):
+    """Downloads a file from google drive if user has been authenticated using oauth2
+
+    Args:
+        file_id (str): [The google drive id of the file]
+        unique_id (str): [The name of the video that is to be used for stored file]
+
+    Returns:
+        bool: [whether the file has been successfully downloaded or not]
+    """
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('drive', 'v3', http=http)
+    request = service.files().get_media(fileId=file_id)
+    fh = BytesIO()
+    # Initialise a downloader object to download the file
+    # Downloads in chunks of 2MB
+    downloader = MediaIoBaseDownload(fh, request, chunksize=2048000)
+    done = False
+    try:
+        # Download the data in chunks
+        while not done:
+            status, done = downloader.next_chunk()
+        fh.seek(0)
+        # Write the received data to the file
+        with open(f'./{videos_dir}/{unique_id}', 'wb') as f:
+            shutil.copyfileobj(fh, f)
+        print("File Downloaded")
+        # Return True if file Downloaded successfully
+        return True
+    except Exception as e:
+        print(str(e))
+        # Return False if something went wrong
+        print("Something went wrong.")
+        return False
+
+def upload_file(file_id, local_file):
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    service = discovery.build('drive', 'v3', http=http)
+    # First retrieve the file from the API.
+    file = service.files().get(fileId=file_id).execute()
+    # File's new content.
+    media_body = MediaFileUpload(local_file, resumable=True)
+    # Send the request to the API.
+
+    updated_file = service.files().update(
+        fileId=file_id,
+        #body=file,
+        #newRevision=True,
+        media_body=media_body).execute()
+
+
+def freeUpSpace(unique_id, video=True, images=True, pdf=False):
+    os.remove(f'./{pdfs_dir}/{unique_id}_tmp.pdf')
+    if video:
+        os.remove(f'./{videos_dir}/{unique_id}')
+    if images:
+        shutil.rmtree(f'./{slides_dir}/{unique_id}')
+    if pdf:
+        os.remove(f'./{pdfs_dir}/{unique_id}')

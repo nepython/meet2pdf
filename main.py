@@ -1,12 +1,15 @@
 import os
+import json
 
 import ocrmypdf
-from flask import Flask, request, jsonify, send_from_directory, abort, current_app, send_file
+from flask import Flask, request, jsonify, send_from_directory, abort, current_app, send_file, url_for, redirect, render_template, make_response
 from flask_cors import CORS, cross_origin
 from celery import Celery
+from oauth2client import client
+from oauth2client.file import Storage
 
 from global_defaults import *
-from utils import video_to_frames, convert2pdf, freeUpSpace
+from utils import video_to_frames, convert2pdf, freeUpSpace, download_file
 
 
 ################ FLASK DECLARATIONS ####################
@@ -36,30 +39,96 @@ def index():
 @app.route('/<unique_id>', methods=['POST', 'GET'])
 def upload_files(unique_id):
     if (request.method == 'GET'):
-        # Search for PDF
-        if os.path.exists(f'./{pdfs_dir}/{unique_id}.pdf'):
-            return send_file(f'./{pdfs_dir}/{unique_id}.pdf', attachment_filename='{}.pdf')
-        # if it doesn't exist then search in videos directory if a video with this id exists
-        elif os.path.exists(f'./{videos_dir}/{unique_id}'):
-            # If video exists then send message that it is being processed
-            return jsonify({'error': 'The video is being processed'}), 403
-        # If video doesn't exist then return error
-        return jsonify({'error': 'No PDF with this id exists'}), 404
+        return _get_pdf_or_error(unique_id)
     if (request.method == 'POST'):
-        uploaded_file = request.files['file']
-        filename = uploaded_file.filename
+        mode = int(request.form.get('mode'))
         meet = bool(int(request.form.get('meet', True)))
         seconds = int(request.form.get('seconds', 60))
-        if filename != '':
-            file_ext = os.path.splitext(filename)[1]
-            # The file extensions that shall be allowed
-            if file_ext not in ['.mp4', '.mov', '.webm', '.wmv', '.mkv']:
-                return jsonify({'error': 'File extension not supported'}), 400
-        uploaded_file.save(os.path.join(f'./{videos_dir}', unique_id))
-        # Start an async function to process the video which keeps running in background
-        convert2images.delay(unique_id, meet, seconds)
-        return jsonify({'uploaded': unique_id}), 200
 
+        if mode==0: # Plain upload
+            uploaded_file = request.files['file']
+            filename = uploaded_file.filename
+            if filename != '':
+                file_ext = os.path.splitext(filename)[1]
+                # The file extensions that shall be allowed
+                if file_ext not in ['.mp4', '.mov', '.webm', '.wmv', '.mkv']:
+                    return jsonify({'error': 'File extension not supported'}), 400
+            uploaded_file.save(os.path.join(f'./{videos_dir}', unique_id))
+            # Start an async function to process the video which keeps running in background
+            convert2images.delay(unique_id, meet, seconds)
+            return jsonify({'uploaded': unique_id}), 200
+
+        if mode==1: #GDrive Upload
+            link = request.form.get('link')
+            if os.path.exists('client_id.json') == False:
+                print('Client secrets file (client_id.json) not found in the app path.')
+            credentials = _get_credentials(unique_id)
+            if not credentials:
+                return jsonify({'error': 'Your credentials have expired kindly logout and login again.'}), 404
+            success = download_file(link, unique_id, credentials)
+            if success:
+                convert2images.delay(unique_id, meet, seconds)
+                return jsonify({'uploaded': unique_id}), 200
+            else:
+                return jsonify({'error': 'File could not be accessed, try again later.'}), 400
+            return redirect(url_for('index'))
+
+        if mode==2: #YouTube Upload
+            link = request.form.get('link')
+            return jsonify({'uploaded': unique_id}), 200
+
+
+@cross_origin
+@app.route('/user/validate', methods=['GET'])
+def logged_in():
+    cred = request.cookies.get('drive')
+    print(_get_credentials('1617191720_ns0yl'))
+    if cred:
+        return jsonify({}), 200
+    return jsonify({}), 403
+
+
+@cross_origin
+@app.route('/user/oauth2callback')
+def oauth2callback():
+    flow = client.flow_from_clientsecrets('client_id.json',
+        scope='https://www.googleapis.com/auth/drive',
+        redirect_uri=url_for('oauth2callback', _external=True)) # access drive api using developer credentials
+    flow.params['include_granted_scopes'] = 'true'
+    if 'code' not in request.args:
+        auth_uri = flow.step1_get_authorize_url()
+        return redirect(auth_uri)
+    else:
+        auth_code = request.args.get('code')
+        credentials = flow.step2_exchange(auth_code).to_json()
+        resp = make_response(redirect('/?mode=1'))
+        resp.set_cookie('drive', credentials)
+        return resp
+
+
+def _get_pdf_or_error(unique_id):
+    if os.path.exists(f'./{pdfs_dir}/{unique_id}.pdf'): # Search for PDF
+        return send_file(f'./{pdfs_dir}/{unique_id}.pdf', attachment_filename='{}.pdf')
+    elif os.path.exists(f'./{videos_dir}/{unique_id}'): # if it doesn't exist then search in videos directory if a video with this id exists
+        return jsonify({'error': 'The video is being processed'}), 403
+    return jsonify({'error': 'No PDF with this id exists'}), 404 # If video doesn't exist then return error
+
+
+def _get_credentials(unique_id):
+    os.makedirs(f'./{credentials_dir}', exist_ok=True)
+    credential_path = f'./{credentials_dir}/{unique_id}.json'
+    credentials = json.loads(request.cookies.get('drive'))
+    open(credential_path,'w').write(request.cookies.get('drive'))
+    store = Storage(credential_path)
+    credentials = store.get()
+    print(credentials)
+    os.remove(credential_path)
+    if not credentials or credentials.invalid:
+        print("Credentials not found.")
+        return False
+    else:
+        print("Credentials fetched successfully.")
+        return credentials
 
 ################## CELERY TASK ##########################
 @celery.task
@@ -81,5 +150,5 @@ def convert2images(unique_id, meet, seconds):
         print(file, " didn't complete successfully.")
 
 if __name__ == "__main__":
-	app.run()
+    app.run()
 ######################### END ###########################

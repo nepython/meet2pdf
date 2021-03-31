@@ -4,6 +4,8 @@ videos
 slides
 env
 pdfs
+credentials
 __pycache__
 test_folder
 *.deb
+*.json
