@@ -21,7 +21,9 @@
         }
 
         body {
-            background-color: hsl(250, 95%, 69%);
+            /* background-color: hsl(250, 95%, 69%) ; */
+            /* background-image: radial-gradient(circle, hsl(220, 70%, 69%) 0%, hsl(250, 95%, 69%) 100%); */
+            background: radial-gradient(circle, hsl(168, 53%, 52%) 0%, hsl(243, 58%, 21%) 200%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -35,6 +37,12 @@
             justify-content: flex-start;
             align-items: flex-start;
             flex-direction: row;
+        }
+
+        @media screen and (max-width: 600px) {
+            #wrapper {
+                flex-direction: column;
+            }
         }
 
         #container {
@@ -124,6 +132,7 @@
             background: hsl(0, 0%, 0%);
             border: 2px dotted #bebebe;
             border-radius: 4px;
+            font-size: 13.33px;
         }
 
         #dropperLabel {
@@ -131,6 +140,12 @@
             position: relative;
             height: 100px;
             width: min(100%, 400px);
+        }
+
+        @media screen and (max-width: 600px) {
+            #dropperLabel {
+                height: 50px;
+            }
         }
 
         #dropperDiv.dragover {
@@ -223,14 +238,16 @@
             align-items: flex-start;
             min-width: 40px;
             flex-direction: column;
-            box-shadow: 0px 0px 14px 0px hsla(0, 34%, 64%, 0.75);
+            box-shadow: 0px 0px 14px 0px hsla(0, 0%, 20%, 0.75);
             transform: translateX(-20px);
             transition: 0.2s all ease;
         }
 
-        @media screen and (max-width: 480px) {
+        @media screen and (max-width: 600px) {
             .optionContainer {
                 transform: translateX(0px);
+                flex-direction: row;
+                width: 100%;
             }
         }
 
@@ -345,10 +362,9 @@
                 }
             }
             catch (err) {
-                alert("Please Refresh the page and try again. Check console for more info.");
+                // alert("Please Refresh the page and try again. Check console for more info.");
                 console.log(err);
                 return true;
-
             }
         }
 
@@ -432,16 +448,21 @@
                     document.querySelector(".link").innerHTML = `<a href="http://meet2pdf.centralus.cloudapp.azure.com/${finalString}">Download PDF</a>`;
                     return true;
                 }
-                else {
+                else if (response.status == 403) {
                     document.querySelector(".link").innerHTML = `Video is being processed...`;
-                    setTimeout(postSuccess(finalString), 5000);
+                    setTimeout(function () {
+                        postSuccess(finalString)
+                    }, 5000);
+                }
+                else {
+                    alert("There was a problem uploading video. Check console for more details");
+                    console.log(response);
                 }
             }
             catch (err) {
-                alert("Please Refresh the page and try again. Check console for more info.");
+                // alert("Please Refresh the page and try again. Check console for more info.");
                 console.log(err);
                 return true;
-
             }
         }
 
@@ -490,7 +511,9 @@
                 },
                 success: function (data, textStatus, xhr) {
                     document.querySelector(".link").innerHTML = `Video is being processed...`;
-                    setTimeout(postSuccess(finalString), 5000);
+                    setTimeout(function () {
+                        postSuccess(finalString)
+                    }, 5000);
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     alert("Couldn't upload video. Check console for details.");
@@ -548,6 +571,10 @@
 
                 // add assoc key values, this will be posts values
                 let driveLink = $("#driveLink").val()
+                if (!driveLink) {
+                    alert("Please enter Google Drive Link");
+                    return true;
+                }
                 var driveID = driveLink.match(/[-\w]{25,}/)[0];
                 console.log(driveID)
                 formData.append("link", driveID);
@@ -582,6 +609,11 @@
             }
             else if (mode == 2) {
                 var formData = new FormData();
+
+                if (!($("#ytLink").val())) {
+                    alert("Please enter a YouTube Link.");
+                    return true;
+                }
 
                 // add assoc key values, this will be posts values
                 formData.append("link", $("#ytLink").val());
