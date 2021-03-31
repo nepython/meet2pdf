@@ -27,12 +27,21 @@
             align-items: center;
             height: 100vh;
             width: 100vw;
+            flex-direction: row;
+        }
+
+        #wrapper {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            flex-direction: row;
         }
 
         #container {
-            background-color: rgb(31, 31, 31);
-            box-shadow: 0px 0px 14px 0px rgba(50, 50, 50, 0.75);
+            background-color: hsl(0, 0%, 12%);
+            box-shadow: 0px 0px 14px 0px hsla(0, 0%, 20%, 0.75);
             padding: 30px 20px;
+            z-index: 2;
         }
 
         .heading {
@@ -63,7 +72,7 @@
         }
 
         fieldset {
-            margin-bottom: min(50px, 5vh);
+            margin-bottom: min(50px, 4vh);
             border: 0;
             color: hsl(200, 2%, 75%);
         }
@@ -207,50 +216,195 @@
             color: hsl(0, 0%, 50%);
             white-space: nowrap;
         }
+
+        .optionContainer {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            min-width: 40px;
+            flex-direction: column;
+            box-shadow: 0px 0px 14px 0px hsla(0, 34%, 64%, 0.75);
+            transform: translateX(-20px);
+            transition: 0.2s all ease;
+        }
+
+        @media screen and (max-width: 480px) {
+            .optionContainer {
+                transform: translateX(0px);
+            }
+        }
+
+        .optionContainer:hover {
+            transform: translateX(0px);
+        }
+
+        .optionContainer>div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: hsl(0, 0%, 20%);
+            height: 40px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .optionContainer>div:hover {
+            background-color: hsl(0, 0%, 12%);
+        }
+
+        .optionContainer>div.selected {
+            background-color: hsl(0, 0%, 12%);
+        }
+
+        .optionContainer img {
+            width: 20px;
+            height: 20px;
+        }
     </style>
 </head>
 
 <body>
-    <div id="container">
-        <div class="heading">Auto Slides Creator</div>
-        <div class="partition"></div>
-        <div class="formContainer">
-            <form enctype="multipart/form-data" id="uploadForm">
-                <fieldset>
-                    <div class="formParam">Select a video file</div>
-                    <!-- <input name="file" type="file" id="file"> -->
-                    <label for="file" id="dropperLabel">
-                        <div id="dropperDiv">Click or drop something here</div>
-                        <input type="file" name="file" id="file">
-                    </label>
-                    <p id="filename"></p>
-                </fieldset>
-                <fieldset>
-                    <div class="formParam">Time between two captures (sec)</div>
-                    <!-- <input type="number" id="seconds" name="seconds" min="20" max="120" value="60"> -->
-                    <input class="range" type="range" name="" value="20" min="20" max="200" id="seconds"
-                        onChange="rangeSlide(this.value)" onmousemove="rangeSlide(this.value)"></input>
-                    <span class="rangeValue">20</span>
-                </fieldset>
-                <fieldset>
-                    <div class="formParam">Is the video a recorded G Meet?</div>
-                    <select name="meet" id="meet">
-                        <option value="1" selected>Yes</option>
-                        <option value="0">No</option>
-                    </select>
-                </fieldset>
-                <fieldset>
-                    <!-- <input type="submit" value="Submit"> -->
-                    <div id="uploadBtn">Upload</div>
-                </fieldset>
-            </form>
-            <div class="link"></div>
+    <div id="wrapper">
+        <div id="container">
+            <div class="heading">Auto Slides Creator</div>
+            <div class="partition"></div>
+            <div class="formContainer">
+                <form enctype="multipart/form-data" id="uploadForm">
+                    <fieldset>
+                        <div class="formParam">Select a video file</div>
+                        <!-- <input name="file" type="file" id="file"> -->
+                        <label for="file" id="dropperLabel">
+                            <div id="dropperDiv">Click or drop something here</div>
+                            <input type="file" name="file" id="file">
+                        </label>
+                        <p id="filename"></p>
+                    </fieldset>
+                    <fieldset>
+                        <div class="formParam">Time between two captures (sec)</div>
+                        <!-- <input type="number" id="seconds" name="seconds" min="20" max="120" value="60"> -->
+                        <input class="range" type="range" name="" value="20" min="20" max="200" id="seconds"
+                            onChange="rangeSlide(this.value)" onmousemove="rangeSlide(this.value)"></input>
+                        <span class="rangeValue">20</span>
+                    </fieldset>
+                    <fieldset>
+                        <div class="formParam">Is the video a recorded G Meet?</div>
+                        <select name="meet" id="meet">
+                            <option value="1" selected>Yes</option>
+                            <option value="0">No</option>
+                        </select>
+                    </fieldset>
+                    <fieldset>
+                        <!-- <input type="submit" value="Submit"> -->
+                        <div id="uploadBtn">Upload</div>
+                    </fieldset>
+                </form>
+                <div class="link"></div>
+            </div>
+        </div>
+        <div class="optionContainer">
+            <div class="selected">
+                <img src="./assets/images/file.svg" alt="" srcset="" onclick="changeMode(0)">
+            </div>
+            <div>
+                <img src="./assets/images/google-drive.svg" alt="" srcset="" onclick="changeMode(1)">
+            </div>
+            <div>
+                <img src="./assets/images/youtube.svg" alt="" srcset="" onclick="changeMode(2)">
+            </div>
         </div>
     </div>
     <script>
+        var params = (new URL(document.location)).searchParams;
+        var mode = 0;
         var fileInput = document.querySelector("#file");
         var filenameContainer = document.querySelector('#filename');
         var dropzone = document.querySelector('#dropperDiv');
+
+        async function driveOpener() {
+            // if HTTP-status is 200-299
+            $("fieldset")[0].remove();
+            let element = `<fieldset>
+                        <div class="formParam">Enter Drive link</div>
+                        <input id="driveLink" type="text" placeholder="https://drive.google.com/file/d/1OdYzkDaHIuaWlNOKlnadc4pg73xhqZfq/view">
+                    </fieldset>`
+            $("#uploadForm").prepend(element);
+            try {
+                let response = await fetch(`http://meet2pdf.centralus.cloudapp.azure.com/user/validate`, {
+                    method: 'GET'
+                });
+                if (response.ok) {
+                }
+                else if (response.status == 403) {
+                    alert("Please login to Google Drive to proceed. Redirecting you now...");
+                    window.location.href = "http://meet2pdf.centralus.cloudapp.azure.com/user/oauth2callback";
+                }
+                else {
+                    alert("Something is not good. Check console. HTML Response Error: " + response.status);
+                    console.log(response)
+                }
+            }
+            catch (err) {
+                alert("Please Refresh the page and try again. Check console for more info.");
+                console.log(err);
+                return true;
+
+            }
+        }
+
+
+        fileUploadOpener = () => {
+            let element = `<fieldset>
+                        <div class="formParam">Select a video file</div>
+                        <!-- <input name="file" type="file" id="file"> -->
+                        <label for="file" id="dropperLabel">
+                            <div id="dropperDiv">Click or drop something here</div>
+                            <input type="file" name="file" id="file">
+                        </label>
+                        <p id="filename"></p>
+                    </fieldset>`
+            $("#uploadForm").prepend(element);
+        }
+
+        ytOpener = () => {
+            let element = `<fieldset>
+                        <div class="formParam">Enter Youtube link</div>
+                        <input id="ytLink" type="text" placeholder="https://www.youtube.com/watch?v=kLaaJ_aeoyM">
+                    </fieldset>`
+            $("#uploadForm").prepend(element);
+        }
+
+        changeMode = (finalMode) => {
+            diff = mode - finalMode;
+
+            if (diff != 0) {
+                mode = finalMode;
+                finalElement = document.querySelector(".optionContainer").children.item(finalMode);
+                for (i = 0; i < 3; i++) {
+                    document.querySelector(".optionContainer").children.item(i).classList.remove("selected");
+                }
+                finalElement.classList.add("selected");
+                // document.querySelector("fieldset").remove();
+                switch (finalMode) {
+                    case 0:
+                        $("fieldset")[0].remove();
+                        console.log("Setting mode 0");
+                        fileUploadOpener();
+                        break;
+                    case 1:
+                        console.log("Setting mode 1");
+                        driveOpener();
+                        break;
+                    case 2:
+                        $("fieldset")[0].remove();
+                        console.log("Setting mode 2");
+                        ytOpener();
+                        break;
+                    default:
+                        changeMode(0)
+                }
+            }
+        }
 
         fileInput.addEventListener('change', function () {
             filenameContainer.innerText = fileInput.value.split('\\').pop();
@@ -317,12 +471,12 @@
         Upload.prototype.doUpload = function () {
             var that = this;
             var formData = new FormData();
-            randomGenerator();
 
             // add assoc key values, this will be posts values
             formData.append("file", this.file, this.getName());
             formData.append("seconds", $("#seconds").val());
             formData.append("meet", $("#meet").val());
+            formData.append("mode", mode);
 
             $.ajax({
                 type: "POST",
@@ -340,7 +494,7 @@
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     alert("Couldn't upload video. Check console for details.");
-                    console.log(jqxhr);
+                    console.log(jqXHR);
                     console.log(textStatus);
                     console.log(errorThrown)
                 },
@@ -349,7 +503,7 @@
                 cache: false,
                 contentType: false,
                 processData: false,
-                timeout: 60000
+                timeout: 600000
             });
         };
 
@@ -368,16 +522,103 @@
 
         //Change id to your id
         $("#uploadBtn").on("click", function (e) {
-            var file = $("#file")[0].files[0];
-            var upload = new Upload(file);
+            randomGenerator();
+            if (mode == 0) {
+                try {
+                    var file = $("#file")[0].files[0];
+                }
+                catch {
+                    alert("Please add the file.");
+                }
 
-            // maby check size or type here with upload.getSize() and upload.getType()
+                if (file) {
+                    var upload = new Upload(file);
 
-            // execute upload
-            upload.doUpload();
+                    // maby check size or type here with upload.getSize() and upload.getType()
+
+                    // execute upload
+                    upload.doUpload();
+                }
+                else {
+                    alert("Please add the file.");
+                }
+            }
+            else if (mode == 1) {
+                var formData = new FormData();
+
+                // add assoc key values, this will be posts values
+                let driveLink = $("#driveLink").val()
+                var driveID = driveLink.match(/[-\w]{25,}/)[0];
+                console.log(driveID)
+                formData.append("link", driveID);
+                formData.append("seconds", $("#seconds").val());
+                formData.append("meet", $("#meet").val());
+                formData.append("mode", mode);
+
+                $.ajax({
+                    type: "POST",
+                    url: `http://meet2pdf.centralus.cloudapp.azure.com/${finalString}`,
+                    xhr: function () {
+                        var myXhr = $.ajaxSettings.xhr();
+                        return myXhr;
+                    },
+                    success: function (data, textStatus, xhr) {
+                        document.querySelector(".link").innerHTML = `Video is being processed...`;
+                        setTimeout(postSuccess(finalString), 5000);
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert("Couldn't upload video. Check console for details.");
+                        console.log(jqXHR);
+                        console.log(textStatus);
+                        console.log(errorThrown)
+                    },
+                    async: true,
+                    data: formData,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    timeout: 600000
+                });
+            }
+            else if (mode == 2) {
+                var formData = new FormData();
+
+                // add assoc key values, this will be posts values
+                formData.append("link", $("#ytLink").val());
+                formData.append("seconds", $("#seconds").val());
+                formData.append("meet", $("#meet").val());
+                formData.append("mode", mode);
+
+                $.ajax({
+                    type: "POST",
+                    url: `http://meet2pdf.centralus.cloudapp.azure.com/${finalString}`,
+                    xhr: function () {
+                        var myXhr = $.ajaxSettings.xhr();
+                        return myXhr;
+                    },
+                    success: function (data, textStatus, xhr) {
+                        document.querySelector(".link").innerHTML = `Video is being processed...`;
+                        setTimeout(postSuccess(finalString), 5000);
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert("Couldn't upload video. Check console for details.");
+                        console.log(jqXHR);
+                        console.log(textStatus);
+                        console.log(errorThrown)
+                    },
+                    async: true,
+                    data: formData,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    timeout: 600000
+                });
+            }
         });
 
-
+        document.addEventListener("DOMContentLoaded", function () {
+            changeMode(parseInt(params.get('mode') || 0));
+        });
     </script>
 </body>
 
