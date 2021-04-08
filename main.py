@@ -17,6 +17,7 @@ from flask import (
 )
 from flask_cors import CORS, cross_origin
 from celery import Celery
+from celery import signals
 from oauth2client import client
 from oauth2client.file import Storage
 
@@ -25,10 +26,7 @@ from utils import video_to_frames, convert2pdf, freeUpSpace, download_file, GetY
 
 
 ################ FLASK DECLARATIONS ####################
-app = Flask(__name__,
-        static_url_path='/assets',
-        static_folder='assets'
-    )
+app = Flask(__name__, static_url_path="/assets", static_folder="assets")
 # Max file size that can be uploaded
 app.config["MAX_CONTENT_LENGTH"] = max_video_size
 
@@ -36,7 +34,7 @@ cors = CORS(app)
 app.config["CORS_HEADERS"] = "Content-Type"
 
 app.config["CELERY_BROKER_URL"] = "redis://localhost:6379/0"
-app.config["CELERY_RESULT_BACKEND"] = "redis://localhost:6379/0"
+app.config["result_backend"] = "redis://localhost:6379/0"
 
 ################ CELERY DECLARATIONS ###################
 celery = Celery(app.name, broker=app.config["CELERY_BROKER_URL"])
@@ -58,7 +56,20 @@ def upload_files(unique_id):
     if request.method == "POST":
         mode = int(request.form.get("mode"))
         meet = bool(int(request.form.get("meet", True)))
+        ocr = bool(int(request.form.get("ocr", False)))
         seconds = int(request.form.get("seconds", 60))
+        seconds = int(request.form.get("seconds", 60))
+        custom_coordinates = request.form.get("custom_coordinates", False)
+        if custom_coordinates:
+            custom_coordinates = json.loads(custom_coordinates)
+        else:
+            custom_coordinates = {
+                # Expressed as a percentage of `h` or `w`
+                "top": 0,
+                "bottom": 0,
+                "left": 0,
+                "right": 0,
+            }
 
         if mode == 0:  # Plain upload
             uploaded_file = request.files["file"]
@@ -70,11 +81,13 @@ def upload_files(unique_id):
                     return jsonify({"error": "File extension not supported"}), 400
             uploaded_file.save(os.path.join(f"./{videos_dir}", unique_id))
             # Start an async function to process the video which keeps running in background
-            convert2images.delay(unique_id, meet, seconds)
+            convert2images.delay(unique_id, meet, seconds, custom_coordinates, ocr)
             return jsonify({"uploaded": unique_id}), 200
 
         if mode == 1:  # GDrive Upload
             link = request.form.get("link")
+            # NOTE: You will need to create this `client_id.json` file
+            # eg: https://help.talend.com/r/E3i03eb7IpvsigwC58fxQg/bS8nwiwx2K9oNXaaFDkokw
             if os.path.exists("client_id.json") == False:
                 print("Client secrets file (client_id.json) not found in the app path.")
             credentials = _get_credentials(unique_id)
@@ -89,7 +102,7 @@ def upload_files(unique_id):
                 )
             success = download_file(link, unique_id, credentials)
             if success:
-                convert2images.delay(unique_id, meet, seconds)
+                convert2images.delay(unique_id, meet, seconds, custom_coordinates, ocr)
                 return jsonify({"uploaded": unique_id}), 200
             else:
                 return (
@@ -101,13 +114,15 @@ def upload_files(unique_id):
         if mode == 2:  # YouTube Upload
             link = request.form.get("link")
             _, title = GetYT(link, unique_id)
-            success = os.path.exists(f'./{videos_dir}/{unique_id}.mp4')
+            success = os.path.exists(f"./{videos_dir}/{unique_id}.mp4")
             if success:
-                os.rename(f'./{videos_dir}/{unique_id}.mp4', f'./{videos_dir}/{unique_id}')
-                convert2images.delay(unique_id, meet=meet, seconds=seconds)
+                os.rename(
+                    f"./{videos_dir}/{unique_id}.mp4", f"./{videos_dir}/{unique_id}"
+                )
+                convert2images.delay(unique_id, meet, seconds, custom_coordinates, ocr)
                 return jsonify({"uploaded": unique_id}), 200
             else:
-                return  jsonify({"error": "Video could not downloaded"}), 400
+                return jsonify({"error": "Video could not downloaded"}), 400
 
 
 @cross_origin
@@ -175,8 +190,13 @@ def google_verification():
 
 
 ################## CELERY TASK ##########################
+@signals.setup_logging.connect
+def setup_celery_logging(**kwargs):
+    pass
+
+
 @celery.task
-def convert2images(unique_id, meet, seconds):
+def convert2images(unique_id, meet, seconds, custom_coordinates, ocr):
     file = f"./{videos_dir}/{unique_id}"
     directory = unique_id  # Directory
     parent_dir = f"./{slides_dir}"  # Parent Directory path
@@ -185,23 +205,29 @@ def convert2images(unique_id, meet, seconds):
         os.makedirs(path, exist_ok=True)
         print("Directory '%s' created successfully" % directory)
         frames = video_to_frames(
-            video_path=file, frames_dir=f"./{slides_dir}", seconds=seconds, meet=meet
+            video_path=file,
+            frames_dir=f"./{slides_dir}",
+            seconds=seconds,
+            meet=meet,
+            custom_coordinates=custom_coordinates,
         )
         if frames:  # If no frames have been generated due to poor video
             convert2pdf(unique_id)
-            ocrmypdf.ocr(
-                f"./{pdfs_dir}/{unique_id}.pdf",
-                f"./{pdfs_dir}/{unique_id}.pdf",
-                deskew=True,
-                pdf_renderer="hocr",
-                language="eng",
-            )
+            if ocr:
+                # Disadvantage is pdf file size increases and image quality detoriates
+                ocrmypdf.ocr(
+                    f"./{pdfs_dir}/{unique_id}.pdf",
+                    f"./{pdfs_dir}/{unique_id}.pdf",
+                    deskew=True,
+                    pdf_renderer="hocr",
+                )
         freeUpSpace(unique_id)
-    except OSError:
+    except OSError as e:
+        raise e
         print("Directory '{0}' can not be created".format(unique_id))
         print(file, " didn't complete successfully.")
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
 ######################### END ###########################

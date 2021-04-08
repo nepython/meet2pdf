@@ -6,7 +6,19 @@ Supported video formats: `['.mp4', '.mov', '.webm', '.wmv', '.mkv']`
 ```code
 # cd meet2pdf
 $ sudo apt install libgl1-mesa-glx
-$ sudo apt-get install tesseract-ocr-all
+$ sudo apt-get install tesseract-ocr
+$ sudo apt-get install \
+    zlib1g-dev \
+    libjpeg-dev \
+    libffi-dev \
+    ghostscript \
+    tesseract-ocr \
+    qpdf \
+    unpaper \
+    python3-pip \
+    python3-pil \
+    python3-pytest \
+    python3-reportlab
 $ sudo apt install redis-server
 $ pip install -r requirements.txt
 

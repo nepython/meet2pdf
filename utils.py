@@ -18,7 +18,9 @@ from pytube import YouTube
 from global_defaults import *
 
 
-def extract_frames(video_path, frames_dir, start=-1, end=-1, seconds=0.1, meet=True):
+def extract_frames(
+    video_path, frames_dir, custom_coordinates, start=-1, end=-1, seconds=0.1, meet=True
+):
     """
     Extract frames from a video using decord's VideoReader
         :param video_path: path of the video
@@ -73,12 +75,20 @@ def extract_frames(video_path, frames_dir, start=-1, end=-1, seconds=0.1, meet=T
         newFrame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         h, w, dimension = newFrame.shape
-        croppedImageAttributes = {
-            "top": int((((1 - shareScreenCoverage["h"]) / 2) * h)),
-            "bottom": int((h - (((1 - shareScreenCoverage["h"]) / 2) * h))),
-            "left": int(0),
-            "right": int(shareScreenCoverage["w"] * w),
-        }
+        if meet:
+            croppedImageAttributes = {
+                "top": int(0.125 * h),
+                "bottom": int(0.875 * h),
+                "left": int(0),
+                "right": int(0.75 * w),
+            }
+        else:
+            croppedImageAttributes = {
+                "top": int(custom_coordinates["top"] * h),
+                "bottom": int((1 - custom_coordinates["bottom"]) * h),
+                "left": int(custom_coordinates["left"] * w),
+                "right": int((1 - custom_coordinates["right"]) * w),
+            }
         # to crop Google meet slides frame only and ignore the speaker part of screen
         newFrame = newFrame[
             croppedImageAttributes["top"] : croppedImageAttributes["bottom"],
@@ -102,7 +112,9 @@ def extract_frames(video_path, frames_dir, start=-1, end=-1, seconds=0.1, meet=T
     return True
 
 
-def video_to_frames(video_path, frames_dir, seconds=1, meet=True):
+def video_to_frames(
+    video_path, frames_dir, seconds=1, meet=True, custom_coordinates=False
+):
     """
     Extracts the frames from a video
         :param video_path: path to the video
@@ -122,7 +134,11 @@ def video_to_frames(video_path, frames_dir, seconds=1, meet=True):
     os.makedirs(os.path.join(frames_dir, video_filename), exist_ok=True)
 
     extract_frames(
-        video_path, frames_dir, seconds=seconds, meet=meet
+        video_path,
+        frames_dir,
+        seconds=seconds,
+        meet=meet,
+        custom_coordinates=custom_coordinates,
     )  # let's now extract the frames
     return os.path.join(
         frames_dir, video_filename
@@ -218,17 +234,11 @@ def upload_file(file_id, local_file):
     # Send the request to the API.
 
     updated_file = (
-        service.files()
-        .update(
-            fileId=file_id,
-            media_body=media_body,
-        )
-        .execute()
+        service.files().update(fileId=file_id, media_body=media_body,).execute()
     )
 
 
 def freeUpSpace(unique_id, video=True, images=True, pdf=False):
-    os.remove(f"./{pdfs_dir}/{unique_id}_tmp.pdf")
     if video:
         os.remove(f"./{videos_dir}/{unique_id}")
     if images:
@@ -236,16 +246,17 @@ def freeUpSpace(unique_id, video=True, images=True, pdf=False):
     if pdf:
         os.remove(f"./{pdfs_dir}/{unique_id}")
 
+
 # GetYT
 def GetYT(link=None, unique_id=None):
-    '''
+    """
     Downloads a file from youtube.\n Does not re-download if the video already
     exists.
     Returns 0 if download succesful, 1 otherwise.
         path_dir: path to save the file at.
         link: YouTube link of the file
-    '''
-    try :
+    """
+    try:
         os.makedirs(videos_dir, exist_ok=True)
     except Exception as e:
         print("Could not create directory to save video")
@@ -263,11 +274,13 @@ def GetYT(link=None, unique_id=None):
 
     # allowed_res is the list of resolutions we are
     # willing to download, in our order of preference.
-    allowed_res = ["480p", "360p", "720p","240p", "144p"]
+    allowed_res = ["720p"]  # , "480p", "360p","240p", "144p"]
     try:
         for res in allowed_res:
             # filters out all the files with "mp4" extension
-            mp4files = yt.streams.filter(res=res, progressive=True, file_extension='mp4')
+            mp4files = yt.streams.filter(
+                res=res, progressive=True, file_extension="mp4"
+            )
             if len(mp4files) != 0:
                 break
         # download the video
@@ -278,5 +291,5 @@ def GetYT(link=None, unique_id=None):
         return 1, None
 
     file_path = os.path.join(videos_dir, yt.title)
-    print(f'File Downloaded {file_path}')
+    print(f"File Downloaded {file_path}")
     return 0, yt.title
