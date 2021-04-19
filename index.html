@@ -362,7 +362,7 @@
                 }
                 else if (response.status == 403) {
                     alert("Please login to Google Drive to proceed. Redirecting you now...");
-                    window.location.href = "${root}//user/oauth2callback";
+                    window.location.href = `${root}//user/oauth2callback`;
                 }
                 else {
                     alert("Something is not good. Check console. HTML Response Error: " + response.status);
